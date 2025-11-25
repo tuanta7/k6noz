@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<clickhouse>
+<!--    <zookeeper>-->
+<!--        <node index="1">-->
+<!--            <host>zookeeper-1</host>-->
+<!--            <port>2181</port>-->
+<!--        </node>-->
+<!--    </zookeeper>-->
+    <remote_servers>
+        <signoz_cluster>
+            <shard>
+                <replica>
+                    <host>clickhouse-1</host>
+                    <port>9000</port>
+                </replica>
+            </shard>
+        </signoz_cluster>
+    </remote_servers>
+</clickhouse>
