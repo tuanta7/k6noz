@@ -16,7 +16,7 @@ func NewRepository(mongo mongo.DB) *Repository {
 	return &Repository{mongo: mongo}
 }
 
-func (r *Repository) GetDriver(ctx context.Context, driverID string) (*domain.Driver, error) {
+func (r *Repository) GetDriverByID(ctx context.Context, driverID string) (*domain.Driver, error) {
 	var driver domain.Driver
 	err := r.mongo.Get(ctx, "drivers", bson.D{{"id", driverID}}, &driver)
 	if err != nil {

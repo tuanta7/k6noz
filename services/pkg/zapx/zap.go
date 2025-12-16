@@ -4,11 +4,11 @@ import (
 	"go.uber.org/zap"
 )
 
-type ZapLogger struct {
+type Logger struct {
 	*zap.Logger
 }
 
-func NewZapLogger() (*ZapLogger, error) {
+func NewLogger() (*Logger, error) {
 	cfg := zap.NewProductionConfig()
 	cfg.Encoding = "console"
 
@@ -20,9 +20,9 @@ func NewZapLogger() (*ZapLogger, error) {
 		return nil, err
 	}
 
-	return &ZapLogger{zl}, nil
+	return &Logger{zl}, nil
 }
 
-func (zl *ZapLogger) Close() error {
+func (zl *Logger) Close() error {
 	return zl.Logger.Sync()
 }

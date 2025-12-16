@@ -13,7 +13,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	logger, err := zapx.NewZapLogger()
+	logger, err := zapx.NewLogger()
 	if err != nil {
 		panic(err)
 	}
