@@ -1,5 +1,6 @@
 package internal
 
 const (
-	NotificationQueue = "notification"
+	PushNotificationQueue  = "push"
+	EmailNotificationQueue = "email"
 )

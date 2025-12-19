@@ -21,13 +21,15 @@ WebSocket services are used to maintain a live feed of driver locations for both
 - **Server-side File Descriptor Limit**: Every open socket consumes a file descriptor. On Linux/macOS, the default soft limit (ulimit -n) is often 1024 and the recommend hard limit is 65,535. There is effectively no fixed port-based limit on the server side for WebSocket concurrency.
 - **Scaling**: For very high numbers of connections, horizontal scaling is typically employed to distribute connections across multiple servers, often with load balancers to manage incoming connections.
 
-### 2.2. Multi Servers Sticky-session
+### 2.2. Multi Servers Sticky-session (For statless fallback)
 
 Sticky session, also known as session affinity, is a load balancing strategy where a client consistently connects to the same server across a session or multiple reconnects.
 
-### 2.3. Fallback Transport Mechanisms
+- Native WebSocket connections are stateful and remain bound to a single server instance for the lifetime of the connection; therefore, load balancer–level sticky sessions are not inherently required for correct WebSocket operation, provided that the connection itself is not redistributed mid-session.
+- Certain higher-level libraries, such as Socket.IO, may require sticky sessions when operating in transport fallback modes (for example, HTTP long polling). In such cases, multiple sequential HTTP requests belonging to the same logical session must be routed to the same server instance to preserve session state and ensure correct behavior.
 
-Some clients, due to restrictive firewalls, proxies, or legacy environments, won't be able to establish a WebSocket connection at all.
+> [!NOTE]
+> Some clients, due to restrictive firewalls, proxies, or legacy environments, won't be able to establish a WebSocket connection at all.
 
 ## 3. Trip History Storage: ClickHouse
 
