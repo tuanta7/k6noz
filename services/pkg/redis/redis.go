@@ -17,7 +17,7 @@ type Client struct {
 	redisClient *goredis.Client
 }
 
-func NewClient(ctx context.Context, config *Config, opts ...Option) (*Client, error) {
+func NewFailoverClient(ctx context.Context, config *Config, opts ...Option) (*Client, error) {
 	client := &Client{}
 
 	c := goredis.NewFailoverClient(&goredis.FailoverOptions{
@@ -25,6 +25,28 @@ func NewClient(ctx context.Context, config *Config, opts ...Option) (*Client, er
 		SentinelAddrs: config.SentinelAddrs,
 		Username:      config.Username,
 		Password:      config.Password,
+	})
+	if err := c.Ping(ctx).Err(); err != nil {
+		return nil, err
+	}
+
+	client.redisClient = c
+	for _, opt := range opts {
+		if err := opt(client); err != nil {
+			return nil, err
+		}
+	}
+
+	return client, nil
+}
+
+func NewClient(ctx context.Context, config *Config, opts ...Option) (*Client, error) {
+	client := &Client{}
+
+	c := goredis.NewClient(&goredis.Options{
+		Addr:     "",
+		Username: config.Username,
+		Password: config.Password,
 	})
 	if err := c.Ping(ctx).Err(); err != nil {
 		return nil, err

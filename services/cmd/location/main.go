@@ -16,7 +16,7 @@ func main() {
 	panicOnErr(err)
 	defer logger.Close()
 
-	redisClient, err := redis.NewClient(ctx, &redis.Config{},
+	redisClient, err := redis.NewFailoverClient(ctx, &redis.Config{},
 		redis.WithMetrics(),
 		redis.WithTraces(),
 	)

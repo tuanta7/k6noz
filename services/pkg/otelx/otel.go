@@ -2,6 +2,7 @@ package otelx
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -17,22 +18,59 @@ import (
 type ShutdownFn func(context.Context) error
 
 type Monitor struct {
-	serviceName string
-	grpcConn    *grpc.ClientConn
+	serviceName   string
+	grpcConn      *grpc.ClientConn
+	prometheus    *PrometheusProvider
+	shutdownFuncs []ShutdownFn
 }
 
-func NewMonitor(serviceName string, conn *grpc.ClientConn) *Monitor {
+func NewMonitor(serviceName, collectorAddr string, prometheus *PrometheusProvider) (*Monitor, error) {
+	grpcConn, err := grpc.NewClient(collectorAddr)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Monitor{
 		serviceName: serviceName,
-		grpcConn:    conn,
+		grpcConn:    grpcConn,
+		prometheus:  prometheus,
+	}, nil
+}
+
+func (m *Monitor) SetupOtelSDK(ctx context.Context) error {
+	msf, err := m.initTracerProvider(ctx)
+	if err != nil {
+		return err
 	}
+
+	tsf, err := m.initTracerProvider(ctx)
+	if err != nil {
+		return err
+	}
+
+	m.shutdownFuncs = []ShutdownFn{msf, tsf}
+	return nil
 }
 
-func (m *Monitor) Close() error {
-	return m.grpcConn.Close()
+func (m *Monitor) Close(ctx context.Context) (errs error) {
+	if m.grpcConn == nil {
+		return nil
+	}
+
+	if err := m.grpcConn.Close(); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
+	for _, sf := range m.shutdownFuncs {
+		if err := sf(ctx); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
 }
 
-func (m *Monitor) InitMeterProvider(ctx context.Context) (ShutdownFn, error) {
+func (m *Monitor) initMeterProvider(ctx context.Context) (ShutdownFn, error) {
 	res, err := resource.New(ctx,
 		resource.WithOS(),
 		resource.WithContainer(),
@@ -53,24 +91,17 @@ func (m *Monitor) InitMeterProvider(ctx context.Context) (ShutdownFn, error) {
 		return nil, err
 	}
 
-	options := []sdkmetric.Option{
+	meterProvider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(res),
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpExporter, sdkmetric.WithInterval(5*time.Second))),
-	}
-
-	promExporter, err := newPrometheusExporter()
-	if err != nil {
-		return nil, err
-	}
-
-	options = append(options, sdkmetric.WithReader(promExporter))
-	meterProvider := sdkmetric.NewMeterProvider(options...)
+		sdkmetric.WithReader(m.prometheus.Exporter()),
+	)
 
 	otel.SetMeterProvider(meterProvider)
 	return meterProvider.Shutdown, nil
 }
 
-func (m *Monitor) InitTracerProvider(ctx context.Context) (ShutdownFn, error) {
+func (m *Monitor) initTracerProvider(ctx context.Context) (ShutdownFn, error) {
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String(m.serviceName),
