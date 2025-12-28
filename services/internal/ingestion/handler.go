@@ -12,13 +12,14 @@ import (
 )
 
 type Handler struct {
-	publisher kafka.Publisher
+	publisher *kafka.Publisher
 	logger    *zapx.Logger
 }
 
-func NewHandler(logger *zapx.Logger) *Handler {
+func NewHandler(logger *zapx.Logger, publisher *kafka.Publisher) *Handler {
 	return &Handler{
-		logger: logger,
+		logger:    logger,
+		publisher: publisher,
 	}
 }
 
@@ -36,7 +37,12 @@ func (h *Handler) HandleWS(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer ws.Close()
+
+	defer func(ws *websocket.Conn) {
+		if err := ws.Close(); err != nil {
+			h.logger.Warn("websocket close error", zap.Error(err))
+		}
+	}(ws)
 
 	for {
 		_, msg, err := ws.ReadMessage()
@@ -52,7 +58,7 @@ func (h *Handler) HandleWS(w http.ResponseWriter, r *http.Request) {
 		}
 
 		key := []byte(location.DriverID)
-		if err := h.publisher.Publish(r.Context(), domain.DriverLocationTopic, key, msg); err != nil {
+		if err := h.publisher.PublishSync(r.Context(), domain.DriverLocationTopic, key, msg); err != nil {
 			h.logger.Error("publish error", zap.Error(err))
 			continue
 		}

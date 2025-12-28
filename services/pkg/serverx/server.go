@@ -40,7 +40,7 @@ func RunServer(server Server, gracePeriod ...time.Duration) error {
 }
 
 func shutdownServer(server Server, gracePeriod ...time.Duration) error {
-	timeout := 30 * time.Second
+	timeout := 20 * time.Second
 	if len(gracePeriod) > 0 {
 		timeout = gracePeriod[0]
 	}

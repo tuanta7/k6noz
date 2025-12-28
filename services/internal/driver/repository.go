@@ -9,19 +9,37 @@ import (
 )
 
 type Repository struct {
-	mongo mongo.DB
+	driverCollection mongo.Collection
+	ratingCollection mongo.Collection
 }
 
-func NewRepository(mongo mongo.DB) *Repository {
-	return &Repository{mongo: mongo}
+func NewRepository(mongo *mongo.Client) *Repository {
+	return &Repository{
+		driverCollection: mongo.Collection("drivers"),
+		ratingCollection: mongo.Collection("ratings"),
+	}
 }
 
 func (r *Repository) GetDriverByID(ctx context.Context, driverID string) (*domain.Driver, error) {
 	var driver domain.Driver
-	err := r.mongo.Get(ctx, "drivers", bson.D{{"id", driverID}}, &driver)
+	err := r.driverCollection.FindOne(ctx, bson.M{"_id": driverID}, &driver)
 	if err != nil {
 		return nil, err
 	}
 
 	return &driver, nil
+}
+
+func (r *Repository) UpdateDriverRating(ctx context.Context, driverID string, rating, score float64) error {
+	return r.driverCollection.UpdateOne(ctx,
+		bson.M{"_id": driverID},
+		bson.M{"$set": bson.M{
+			"rating": rating,
+			"score":  score,
+		}},
+	)
+}
+
+func (r *Repository) InsertRating(ctx context.Context, rating *domain.Rating) error {
+	return r.ratingCollection.InsertOne(ctx, rating)
 }

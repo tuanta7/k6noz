@@ -18,6 +18,7 @@ type Config struct {
 	MinPoolSize    uint64
 	ConnectTimeout time.Duration
 	QueryTimeout   time.Duration
+	Monitor        bool
 }
 
 type Client struct {
@@ -35,8 +36,11 @@ func NewClient(ctx context.Context, cfg *Config) (*Client, error) {
 		SetConnectTimeout(cfg.ConnectTimeout).
 		SetMaxPoolSize(cfg.MaxPoolSize).
 		SetMinPoolSize(cfg.MinPoolSize).
-		SetConnectTimeout(cfg.ConnectTimeout).
-		SetMonitor(otelmongo.NewMonitor())
+		SetConnectTimeout(cfg.ConnectTimeout)
+
+	if cfg.Monitor {
+		opts.SetMonitor(otelmongo.NewMonitor())
+	}
 
 	client, err := mongo.Connect(opts)
 	if err != nil {
@@ -47,10 +51,15 @@ func NewClient(ctx context.Context, cfg *Config) (*Client, error) {
 		return nil, fmt.Errorf("failed to ping mongodb: %w", pingErr)
 	}
 
+	timeout := 10 * time.Second
+	if cfg.QueryTimeout > 0 {
+		timeout = cfg.QueryTimeout
+	}
+
 	return &Client{
 		client:   client,
 		database: client.Database(cfg.Database),
-		timeout:  cfg.QueryTimeout,
+		timeout:  timeout,
 	}, nil
 }
 
@@ -58,9 +67,9 @@ func (c *Client) Close(ctx context.Context) error {
 	return c.client.Disconnect(ctx)
 }
 
-func (c *Client) Get(ctx context.Context, collection string, filter any, result any) error {
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-
-	return c.database.Collection(collection).FindOne(ctx, filter).Decode(result)
+func (c *Client) Collection(name string) *CollectionClient {
+	return &CollectionClient{
+		timeout:    c.timeout,
+		collection: c.database.Collection(name),
+	}
 }

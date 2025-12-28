@@ -6,6 +6,7 @@ import (
 	"os/signal"
 
 	"github.com/tuanta7/k6noz/services/internal/ingestion"
+	"github.com/tuanta7/k6noz/services/pkg/kafka"
 	"github.com/tuanta7/k6noz/services/pkg/otelx"
 	"github.com/tuanta7/k6noz/services/pkg/serverx"
 	"github.com/tuanta7/k6noz/services/pkg/slient"
@@ -38,7 +39,11 @@ func main() {
 	err = monitor.SetupOtelSDK(ctx)
 	panicOnErr(err)
 
-	handler := ingestion.NewHandler(logger)
+	publisher, err := kafka.NewPublisher(cfg.Kafka.Brokers)
+	panicOnErr(err)
+	defer publisher.Close()
+
+	handler := ingestion.NewHandler(logger, publisher)
 	server := ingestion.NewServer(cfg, handler, prometheus)
 
 	logger.Info("starting server", zap.String("address", cfg.BindAddress))

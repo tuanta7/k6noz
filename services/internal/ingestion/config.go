@@ -8,7 +8,14 @@ import (
 const ConfigPrefix = "INGESTION"
 
 type Config struct {
-	BindAddress string `envconfig:"BIND_ADDRESS" required:"true" default:"0.0.0.0:8080"`
+	BindAddress string      `envconfig:"BIND_ADDRESS" required:"true"`
+	Kafka       KafkaConfig `envconfig:"KAFKA"`
+}
+
+type KafkaConfig struct {
+	Brokers []string `envconfig:"BROKERS" required:"true"`
+	Topic   string   `envconfig:"TOPIC" required:"true"`
+	GroupID string   `envconfig:"GROUP_ID" required:"true"`
 }
 
 func LoadConfig() (*Config, error) {

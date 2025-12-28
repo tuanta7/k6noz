@@ -2,6 +2,7 @@ package slient
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/labstack/gommon/log"
@@ -21,4 +22,14 @@ type CloserWithContext interface {
 func CloseWithContext(srv CloserWithContext, ctx context.Context) {
 	err := srv.Close(ctx)
 	log.Warnf("Error while closing: %s", err)
+}
+
+func PanicOnErr(err error, msg ...string) {
+	if err != nil {
+		if len(msg) > 0 {
+			fmt.Printf("%s: %s\n", msg, err)
+		}
+
+		panic(err)
+	}
 }

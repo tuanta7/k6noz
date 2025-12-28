@@ -13,6 +13,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type ShutdownFn func(context.Context) error
@@ -25,7 +26,9 @@ type Monitor struct {
 }
 
 func NewMonitor(serviceName, collectorAddr string, prometheus *PrometheusProvider) (*Monitor, error) {
-	grpcConn, err := grpc.NewClient(collectorAddr)
+	grpcConn, err := grpc.NewClient(collectorAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		return nil, err
 	}

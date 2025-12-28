@@ -8,7 +8,7 @@ import (
 )
 
 type Handler struct {
-	kafka kafka.Broker
+	kafka kafka.Consumer
 	uc    *UseCase
 }
 

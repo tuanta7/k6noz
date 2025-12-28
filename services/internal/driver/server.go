@@ -1,41 +1,36 @@
-package location
+package driver
 
 import (
 	"context"
 	"net/http"
-
-	"github.com/labstack/echo/v4"
 )
 
 type Server struct {
-	address string
-	engine  *echo.Echo
+	mux     *http.ServeMux
 	server  *http.Server
 	handler *Handler
 }
 
-func NewServer(address string, handler *Handler) *Server {
-	engine := echo.New()
+func NewServer(addr string, handler *Handler) *Server {
+	mux := http.NewServeMux()
 	server := &http.Server{
-		Addr:    address,
-		Handler: engine,
+		Addr:    addr,
+		Handler: mux,
 	}
 
 	return &Server{
-		address: address,
-		engine:  engine,
+		mux:     mux,
 		server:  server,
 		handler: handler,
 	}
 }
 
 func (s *Server) Run() error {
-	s.registerRoutes()
+	s.mux.HandleFunc("GET /drivers/{id}", s.handler.GetDriverByID)
+	s.mux.HandleFunc("POST /ratings", s.handler.CreateNewRating)
 	return s.server.ListenAndServe()
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
-
-func (s *Server) registerRoutes() {}

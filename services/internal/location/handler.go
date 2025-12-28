@@ -6,9 +6,23 @@ import (
 )
 
 type Handler struct {
-	kafka kafka.Broker
+	kafka kafka.Consumer
 }
 
-func (h *Handler) UpdateDriverLocation(ctx echo.Context) error {
+func NewHandler() *Handler {
+	return &Handler{}
+}
+
+func (h *Handler) GetNearByDrivers(ctx echo.Context) error {
+	return nil
+}
+
+func (h *Handler) GetDriverLocation() error {
+	// sse
+	return nil
+}
+
+func (h *Handler) UpdateDriverLocation() error {
+	// kafka
 	return nil
 }
