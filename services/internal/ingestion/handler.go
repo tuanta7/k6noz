@@ -45,14 +45,18 @@ func (h *Handler) HandleWS(w http.ResponseWriter, r *http.Request) {
 	}(ws)
 
 	for {
+		locationUpdatesReceivedTotal.Add(r.Context(), 1)
+
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
+			locationUpdatesInvalidTotal.Add(r.Context(), 1)
 			h.logger.Error("websocket read error", zap.Error(err))
 			break
 		}
 
 		var location domain.DriverLocation
 		if err := json.Unmarshal(msg, &location); err != nil {
+			locationUpdatesInvalidTotal.Add(r.Context(), 1)
 			h.logger.Error("invalid payload", zap.Error(err))
 			continue
 		}

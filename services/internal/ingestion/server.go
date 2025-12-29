@@ -3,24 +3,22 @@ package ingestion
 import (
 	"context"
 	"net/http"
-
-	"github.com/tuanta7/k6noz/services/pkg/otelx"
 )
 
 type Server struct {
-	server     *http.Server
-	mux        *http.ServeMux
-	handler    *Handler
-	prometheus *otelx.PrometheusProvider
+	server        *http.Server
+	mux           *http.ServeMux
+	handler       *Handler
+	metricHandler http.Handler
 }
 
-func NewServer(cfg *Config, handler *Handler, prometheus *otelx.PrometheusProvider) *Server {
+func NewServer(cfg *Config, handler *Handler, metricHandler http.Handler) *Server {
 	mux := http.NewServeMux()
 
 	return &Server{
-		handler:    handler,
-		prometheus: prometheus,
-		mux:        mux,
+		handler:       handler,
+		metricHandler: metricHandler,
+		mux:           mux,
 		server: &http.Server{
 			Addr:    cfg.BindAddress,
 			Handler: mux,
@@ -38,6 +36,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) registerRoutes() {
-	s.mux.Handle("GET /metrics", s.prometheus.Handler())
+	s.mux.Handle("GET /metrics", s.metricHandler)
 	s.mux.HandleFunc("/ws", s.handler.HandleWS)
 }

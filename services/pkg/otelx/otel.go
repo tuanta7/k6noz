@@ -13,7 +13,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type ShutdownFn func(context.Context) error
@@ -25,19 +24,25 @@ type Monitor struct {
 	shutdownFuncs []ShutdownFn
 }
 
-func NewMonitor(serviceName, collectorAddr string, prometheus *PrometheusProvider) (*Monitor, error) {
-	grpcConn, err := grpc.NewClient(collectorAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return nil, err
-	}
+type Option func(*Monitor)
 
-	return &Monitor{
+func WithPrometheus(prometheus *PrometheusProvider) Option {
+	return func(monitor *Monitor) {
+		monitor.prometheus = prometheus
+	}
+}
+
+func NewMonitor(serviceName string, grpcConn *grpc.ClientConn, opts ...Option) (*Monitor, error) {
+	m := &Monitor{
 		serviceName: serviceName,
 		grpcConn:    grpcConn,
-		prometheus:  prometheus,
-	}, nil
+	}
+
+	for _, opt := range opts {
+		opt(m)
+	}
+
+	return m, nil
 }
 
 func (m *Monitor) SetupOtelSDK(ctx context.Context) error {
@@ -94,10 +99,16 @@ func (m *Monitor) initMeterProvider(ctx context.Context) (ShutdownFn, error) {
 		return nil, err
 	}
 
+	var reader sdkmetric.Reader
+	if m.prometheus != nil {
+		reader = m.prometheus.Exporter()
+	} else {
+		reader = sdkmetric.NewPeriodicReader(otlpExporter, sdkmetric.WithInterval(5*time.Second))
+	}
+
 	meterProvider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(res),
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpExporter, sdkmetric.WithInterval(5*time.Second))),
-		sdkmetric.WithReader(m.prometheus.Exporter()),
+		sdkmetric.WithReader(reader),
 	)
 
 	otel.SetMeterProvider(meterProvider)

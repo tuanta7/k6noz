@@ -6,13 +6,14 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/tuanta7/k6noz/services/internal/driver"
 	"github.com/tuanta7/k6noz/services/pkg/mongo"
 	"github.com/tuanta7/k6noz/services/pkg/otelx"
 	"github.com/tuanta7/k6noz/services/pkg/serverx"
 	"github.com/tuanta7/k6noz/services/pkg/slient"
 	"github.com/tuanta7/k6noz/services/pkg/zapx"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -26,13 +27,12 @@ func main() {
 	slient.PanicOnErr(err, "failed to create logger")
 	defer slient.Close(logger)
 
-	prometheus, err := otelx.NewPrometheusProvider(
-		collectors.NewBuildInfoCollector(),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	grpcConn, err := grpc.NewClient(cfg.OTelGRPCEndpoint,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	slient.PanicOnErr(err)
 
-	monitor, err := otelx.NewMonitor(cfg.OTelServiceName, cfg.OTelGRPCEndpoint, prometheus)
+	monitor, err := otelx.NewMonitor(cfg.OTelServiceName, grpcConn)
 	slient.PanicOnErr(err)
 	defer slient.CloseWithContext(monitor, ctx)
 
@@ -53,7 +53,9 @@ func main() {
 	uc := driver.NewUseCase(logger, repo)
 	handler := driver.NewHandler(logger, uc)
 
-	server := driver.NewServer(cfg.BindAddress, handler, prometheus)
+	server := driver.NewServer(cfg.BindAddress, handler)
+
+	fmt.Println("Starting server on", cfg.BindAddress)
 	err = serverx.RunServer(server)
 	slient.PanicOnErr(err)
 	defer func(server *driver.Server, ctx context.Context) {
