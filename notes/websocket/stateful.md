@@ -13,14 +13,14 @@ Because TCP failure detection can be slow, protocols frequently implement heartb
 - WebSocket uses ping/pong frames for this purpose.
 - Gateways such as NGINX rely on read/write timeouts and socket errors.
 
-### 1.2. Appendix: HTTP
+### 1.2. HTTP Failure Detection for TCP?
 
 While built on top of TCP – a stateful protocol, HTTP is stateless itself.
 
-- HTTP has no intrinsic mechanism for detecting abrupt peer failure or half-open connections.
+- HTTP has **NO** intrinsic mechanism for detecting abrupt peer failure or half-open connections.
 - The term `keep-alive` in HTTP/1.1 refers to connection reuse, not liveness probing.
 
-## 2. Gateway/LB Behavior (NGINX)
+## 2. NGINX Layer 7 Proxying
 
 Reference: [WebSocket Proxying](https://nginx.org/en/docs/http/websocket.html?)
 
@@ -56,15 +56,13 @@ When NGINX needs to connect to a backend service (for HTTP, WebSocket, or any TC
 connect(fd, backend_ip, backend_port)
 ```
 
-The operating system selects a free port from the ephemeral port range (typically 1024-65535) and binds the socket implicitly before the connection is established.
-
-Each connection pair is represented by 2 tupes
+The operating system selects a free port from the ephemeral port range (typically 1024-65535) and binds the socket implicitly before the connection is established. Each connection pair is represented by 2 tupes
 
 ```sh
 # client_source/client_port and backend_source/backend_port are fixed values
 
-(client_source, client_port, nginx_source, nginx_port)
-(nginx_source, nginx_port, backend_source, backend_port)
+1. (client_source, client_port, nginx_source, nginx_port)
+2. (nginx_source, nginx_port, backend_source, backend_port)
 ```
 
-For example, with an NGINX node with ~ 50k ephemeral ports and 3 backend nodes, there will be ≈ 150k concurrent upstream TCP connections
+For example, having an NGINX node with ~ 50k ephemeral ports and 3 backend nodes, there will be ~ 150k concurrent upstream TCP connections

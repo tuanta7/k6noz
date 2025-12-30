@@ -2,6 +2,9 @@
 
 ## 1. Supported Protocols
 
+- WebSocket
+- Long Polling
+
 ## 2. Sticky Session
 
 Sticky session, also known as session affinity, is a load balancing strategy where a client consistently connects to the same server across a session or multiple reconnects.
