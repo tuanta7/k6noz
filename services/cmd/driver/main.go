@@ -32,8 +32,7 @@ func main() {
 	)
 	slient.PanicOnErr(err)
 
-	monitor, err := otelx.NewMonitor(cfg.OTelServiceName, grpcConn)
-	slient.PanicOnErr(err)
+	monitor := otelx.NewMonitor(cfg.OTelServiceName, grpcConn)
 	defer slient.CloseWithContext(monitor, ctx)
 
 	err = monitor.SetupOtelSDK(ctx)

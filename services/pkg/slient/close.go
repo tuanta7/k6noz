@@ -29,7 +29,6 @@ func PanicOnErr(err error, msg ...string) {
 		if len(msg) > 0 {
 			fmt.Printf("%s: %s\n", msg, err)
 		}
-
 		panic(err)
 	}
 }

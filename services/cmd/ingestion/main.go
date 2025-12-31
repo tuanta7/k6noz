@@ -35,8 +35,7 @@ func main() {
 	)
 	panicOnErr(err)
 
-	monitor, err := otelx.NewMonitor(cfg.OTelServiceName, grpcConn, otelx.WithPrometheus(prometheus))
-	panicOnErr(err)
+	monitor := otelx.NewMonitor(cfg.OTelServiceName, grpcConn, otelx.WithPrometheus(prometheus))
 	defer slient.CloseWithContext(monitor, ctx)
 
 	err = monitor.SetupOtelSDK(ctx)

@@ -1,0 +1,81 @@
+x-common: &common
+  restart: unless-stopped
+  deploy:
+    resources:
+      limits:
+        cpus: '0.25'
+        memory: 256M
+
+services:
+  nginx:
+    !!merge <<: *common
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+
+  kafka:
+    !!merge <<: *common
+    image: apache/kafka:latest
+    ports:
+      - "9192:9092"
+      - "9193:9093"
+    environment:
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NUM_PARTITIONS: 3
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9192" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka-ui:
+    !!merge <<: *common
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "9191:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9192
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  ingestion-1:
+    !!merge <<: *common
+    build:
+      context: ..
+      dockerfile: ./docker/location/Dockerfile
+    container_name: ingestion
+    environment:
+      INGESTION_OTEL_SERVICE_NAME: github.com/tuanta7/k6noz/services/ingestion
+      INGESTION_BIND_ADDRESS: 0.0.0.0:8080
+
+  ingestion-2:
+    !!merge <<: *common
+    build:
+      context: ..
+      dockerfile: ./docker/location/Dockerfile
+    container_name: ingestion
+    environment:
+      INGESTION_OTEL_SERVICE_NAME: github.com/tuanta7/k6noz/services/ingestion
+      INGESTION_BIND_ADDRESS: 0.0.0.0:8080
+
+
+  driver:
+    !!merge <<: *common
+    build:
+      context: ..
+      dockerfile: ./docker/driver/Dockerfile
+    container_name: driver
+    environment:
+      OTEL_GRPC_ENDPOINT: host.docker.internal:4317
+      DRIVER_OTEL_SERVICE_NAME: github.com/tuanta7/k6noz/services/driver
+      DRIVER_BIND_ADDRESS: 0.0.0.0:8080
+      DRIVER_MONGO_URI: mongodb://host.docker.internal:27017
+      DRIVER_MONGO_DATABASE: k6noz

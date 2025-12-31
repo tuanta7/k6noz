@@ -1,10 +1,12 @@
 package driver
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/labstack/gommon/log"
 )
 
 const ConfigPrefix = "DRIVER"
@@ -25,14 +27,14 @@ type MongoConfig struct {
 	QueryTimeout   time.Duration `envconfig:"QUERY_TIMEOUT" default:"10s"`
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(envFiles ...string) (*Config, error) {
 	var cfg Config
-	if err := godotenv.Load(); err != nil {
-		return nil, err
+	if err := godotenv.Load(envFiles...); err != nil {
+		log.Warnf("failed to load .env file: %v", err)
 	}
 
 	if err := envconfig.Process(ConfigPrefix, &cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to process env variables: %w", err)
 	}
 
 	return &cfg, nil

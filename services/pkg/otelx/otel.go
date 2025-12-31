@@ -32,7 +32,7 @@ func WithPrometheus(prometheus *PrometheusProvider) Option {
 	}
 }
 
-func NewMonitor(serviceName string, grpcConn *grpc.ClientConn, opts ...Option) (*Monitor, error) {
+func NewMonitor(serviceName string, grpcConn *grpc.ClientConn, opts ...Option) *Monitor {
 	m := &Monitor{
 		serviceName: serviceName,
 		grpcConn:    grpcConn,
@@ -42,7 +42,7 @@ func NewMonitor(serviceName string, grpcConn *grpc.ClientConn, opts ...Option) (
 		opt(m)
 	}
 
-	return m, nil
+	return m
 }
 
 func (m *Monitor) SetupOtelSDK(ctx context.Context) error {

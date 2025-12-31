@@ -1,8 +1,11 @@
 package ingestion
 
 import (
+	"fmt"
+
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/labstack/gommon/log"
 )
 
 const ConfigPrefix = "INGESTION"
@@ -20,14 +23,14 @@ type KafkaConfig struct {
 	GroupID string   `envconfig:"GROUP_ID" required:"true"`
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(envFiles ...string) (*Config, error) {
 	var cfg Config
-	if err := godotenv.Load(); err != nil {
-		return nil, err
+	if err := godotenv.Load(envFiles...); err != nil {
+		log.Warnf("failed to load .env file: %v", err)
 	}
 
 	if err := envconfig.Process(ConfigPrefix, &cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to process env variables: %w", err)
 	}
 
 	return &cfg, nil
